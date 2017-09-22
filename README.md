@@ -1,6 +1,13 @@
 # async-mysql-connector
 异步的mysql驱动
 
+* 启用异步
+``` java
+final String url = AsyncCall.enable("jdbc:mysql://localhost:3306/async-mysql");
+final Connection connection = DriverManager.getConnection(url, "root", "tydic");
+```
+   `AsyncCall.enable()`方法会向url中添加以下信息： 1. 禁
+  用SSL， 2. 设置socketFactory， 3. 设置Statement拦截器
 
 * 异步回调
 ```java
