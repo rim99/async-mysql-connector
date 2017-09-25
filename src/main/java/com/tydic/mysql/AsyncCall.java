@@ -2,6 +2,7 @@ package com.tydic.mysql;
 
 import com.tydic.mysql.async.ResultSetListener;
 import com.tydic.mysql.async.UpdateCountListener;
+import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.Future;
 
 import java.sql.PreparedStatement;

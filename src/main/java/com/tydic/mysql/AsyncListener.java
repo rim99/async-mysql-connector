@@ -57,32 +57,8 @@ public abstract class AsyncListener<T> extends ChannelInboundHandlerAdapter {
 
     public void channelRead(ChannelHandlerContext ctx, ByteBuf byteBuf) throws Exception {
         if (inResultSetStream) {
-            try {
-                if (columnCount > 0) {
-                    //columns
-                    --columnCount;
-                    channelReadResultSetPacket(ctx, byteBuf);
-                } else {
-                    if (columnCount == 0 && (!isEOFDeprecated)) {
-                        --columnCount;
-                        if (isEOF(byteBuf)) {
-                            channelReadEOFPacket(ctx, byteBuf);
-                        } else {
-                            throw new RuntimeException("为什么不是EOF包?");
-                        }
-                    } else {
-                        if (isEOF(byteBuf)) {
-                            channelReadEOFPacket(ctx, byteBuf);
-                        } else {
-                            channelReadResultSetPacket(ctx, byteBuf);
-                        }
-                    }
-                }
-
-            } finally {
-                --columnCount;
-            }
-
+            channelReadResultSet(ctx, byteBuf);
+            return;
         }
         int type = byteBuf.getByte(4) & 0xFF;
         switch (type) {
@@ -100,19 +76,53 @@ public abstract class AsyncListener<T> extends ChannelInboundHandlerAdapter {
             default:
                 inResultSetStream = true;
                 columnCount = type;
-                channelReadResultSetPacket(ctx, byteBuf);
+                channelReadResultHeadPacket(ctx, byteBuf);
                 break;
         }
     }
 
-    private static boolean isEOF(ByteBuf byteBuf) {
-        return ((byteBuf.getByte(4) & 0xFF) == 0xFE) && byteBuf.readableBytes() <= 9;
+    private void channelReadResultSet(ChannelHandlerContext ctx, ByteBuf byteBuf) {
+        try {
+            if (columnCount > 0) {
+                //column define
+                channelReadResultColumnsPacket(ctx, byteBuf);
+            } else {
+                if (columnCount == 0 && (!isEOFDeprecated)) {
+                    if (isEOF(byteBuf)) {
+                        channelReadEOFPacket(ctx, byteBuf);
+                    } else {
+                        throw new RuntimeException("为什么不是EOF包?");
+                    }
+                } else {
+                    if (isEOF(byteBuf)) {
+                        channelReadEOFPacket(ctx, byteBuf);
+                    } else {
+                        //row packet
+                        channelReadResultRowDataPacket(ctx, byteBuf);
+                    }
+                }
+            }
+        } finally {
+            --columnCount;
+        }
     }
 
+    private static boolean isEOF(ByteBuf byteBuf) {
+        return ((byteBuf.getByte(4) & 0xFF) == 0xFE);
+    }
+
+    protected void channelReadResultHeadPacket(ChannelHandlerContext ctx, ByteBuf byteBuf) {
+        channelReadResultSetPacket(ctx, byteBuf);
+    }
+    protected void channelReadResultColumnsPacket(ChannelHandlerContext ctx, ByteBuf byteBuf) {
+        channelReadResultSetPacket(ctx, byteBuf);
+    }
+    protected void channelReadResultRowDataPacket(ChannelHandlerContext ctx, ByteBuf byteBuf) {
+        channelReadResultSetPacket(ctx, byteBuf);
+    }
     protected void channelReadResultSetPacket(ChannelHandlerContext ctx, ByteBuf byteBuf) {
         promise.setFailure(new IOException("非预期的报文"));
     }
-
     protected void channelReadErrorPacket(ChannelHandlerContext ctx, ByteBuf error) {
         promise.setFailure(new IOException("非预期的报文"));
     }

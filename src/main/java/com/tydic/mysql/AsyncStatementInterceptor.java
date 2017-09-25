@@ -42,19 +42,31 @@ public class AsyncStatementInterceptor implements StatementInterceptorV2 {
         init = true;
     }
 
-    public static <T> Future<T> intercept(java.sql.Statement statement, AsyncListener<T> listener) throws SQLException {
+    private static AsyncStatementInterceptor getAsyncStatementInterceptor(java.sql.Statement statement) throws SQLException {
         java.sql.Connection connection = statement.getConnection();
-        AsyncStatementInterceptor interceptor = CONNECTION_INTERCEPTOR_MAP.get(connection);
+        connection = connection.unwrap(MySQLConnection.class);
+        return CONNECTION_INTERCEPTOR_MAP.get(connection);
+    }
+
+    public static <T> Future<T> intercept(java.sql.Statement statement, AsyncListener<T> listener) throws SQLException {
+        AsyncStatementInterceptor interceptor = getAsyncStatementInterceptor(statement);
         if (!interceptor.init) {
             interceptor.init();
         }
-        interceptor.interceptStatement = (Statement) statement;
+        return intercept(interceptor, statement, listener);
+    }
+
+    private static <T> Future<T> intercept(AsyncStatementInterceptor interceptor, java.sql.Statement statement, AsyncListener<T> listener) throws SQLException {
+        interceptor.interceptStatement = statement.unwrap(Statement.class);
         listener.init(interceptor.channel);
         interceptor.listener = listener;
         return listener.getFuture();
     }
 
     public ResultSetInternalMethods preProcess(String sql, Statement interceptedStatement, Connection connection) throws SQLException {
+        if (!init) {
+            return null;
+        }
         if (this.listener != null && interceptStatement == interceptedStatement) {
             final ChannelPipeline pipeline = channel.pipeline();
             pipeline.addFirst(TMP_LISTENER_NAME, listener);

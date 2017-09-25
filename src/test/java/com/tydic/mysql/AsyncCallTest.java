@@ -31,7 +31,7 @@ public class AsyncCallTest {
     public void testExecute() throws Exception {
 //TODO: Test goes here...
 
-        final String url = AsyncCall.enable("jdbc:mysql://172.168.1.215:3307/vds");
+        final String url = AsyncCall.enable("jdbc:mysql://215.tydic.bj:3307/vds");
         final Connection connection = DriverManager.getConnection(url, "root", "tydic");
         final PreparedStatement preparedStatement = connection.prepareStatement("select 'hello async-mysql-connector!'");
         AsyncCall.asyncQuery(preparedStatement).addListener(new FutureListener<ResultSet>() {
