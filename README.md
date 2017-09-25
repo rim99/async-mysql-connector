@@ -1,6 +1,14 @@
 # async-mysql-connector
 异步的mysql驱动
 
+```
+<dependency>
+  <groupId>com.github.bj-tydic</groupId>
+  <artifactId>async-mysql-connector</artifactId>
+  <version>1.0</version>
+</dependency>
+```
+
 * 启用异步
 ``` java
 final String url = AsyncCall.enable("jdbc:mysql://localhost:3306/async-mysql");
