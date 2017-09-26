@@ -6,7 +6,7 @@
 
     <groupId>com.github.bj-tydic</groupId>
     <artifactId>async-mysql-connector</artifactId>
-    <version>1.0</version>
+    <version>1.1</version>
 
     <name>${project.groupId}:${project.artifactId}</name>
     <description>async jdbc driver for mysql</description>
