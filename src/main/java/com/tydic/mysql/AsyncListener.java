@@ -1,11 +1,10 @@
 package com.tydic.mysql;
 
-import com.tydic.mysql.AsyncSocketChannel;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.DefaultPromise;
-import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 
 import java.io.IOException;
@@ -23,35 +22,36 @@ public abstract class AsyncListener<T> extends ChannelInboundHandlerAdapter {
 
     public AsyncListener(AsyncSocketChannel asyncSocketChannel) {
         super();
-        init(asyncSocketChannel);
+        init(asyncSocketChannel, asyncSocketChannel.eventLoop());
     }
 
     protected AsyncListener() {
 
     }
 
-    public void init(AsyncSocketChannel asyncSocketChannel) {
-        if(init){
+    public void init(AsyncSocketChannel asyncSocketChannel, EventLoop eventLoop) {
+        if (init) {
             return;
         }
         this.channel = asyncSocketChannel;
         this.isEOFDeprecated = channel.getIO().isEOFDeprecated();
-        EventExecutor eventExecutor = asyncSocketChannel.pipeline().lastContext().executor();
-        this.promise = new DefaultPromise<T>(eventExecutor);
+        this.promise = new DefaultPromise<>(eventLoop);
         init = true;
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof ByteBuf) {
-            ByteBuf byteBuf = (ByteBuf) msg;
-            try {
-                channelRead(ctx, byteBuf);
-            } finally {
-                byteBuf.release();
+        synchronized (this.channel.getConnectionMutex()) {
+            if (msg instanceof ByteBuf) {
+                ByteBuf byteBuf = (ByteBuf) msg;
+                try {
+                    channelRead(ctx, byteBuf);
+                } finally {
+                    byteBuf.release();
+                }
+            } else {
+                ctx.fireChannelRead(msg);
             }
-        } else {
-            ctx.fireChannelRead(msg);
         }
     }
 
@@ -114,15 +114,19 @@ public abstract class AsyncListener<T> extends ChannelInboundHandlerAdapter {
     protected void channelReadResultHeadPacket(ChannelHandlerContext ctx, ByteBuf byteBuf) {
         channelReadResultSetPacket(ctx, byteBuf);
     }
+
     protected void channelReadResultColumnsPacket(ChannelHandlerContext ctx, ByteBuf byteBuf) {
         channelReadResultSetPacket(ctx, byteBuf);
     }
+
     protected void channelReadResultRowDataPacket(ChannelHandlerContext ctx, ByteBuf byteBuf) {
         channelReadResultSetPacket(ctx, byteBuf);
     }
+
     protected void channelReadResultSetPacket(ChannelHandlerContext ctx, ByteBuf byteBuf) {
         promise.setFailure(new IOException("非预期的报文"));
     }
+
     protected void channelReadErrorPacket(ChannelHandlerContext ctx, ByteBuf error) {
         promise.setFailure(new IOException("非预期的报文"));
     }

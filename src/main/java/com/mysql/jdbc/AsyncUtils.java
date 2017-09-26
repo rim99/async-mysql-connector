@@ -39,9 +39,7 @@ public class AsyncUtils {
         Buffer packet = new Buffer(buff);
         try {
             checkErrorPacket.invoke(io, packet);
-        } catch (IllegalAccessException e) {
-            throw new SQLException(e);
-        } catch (InvocationTargetException e) {
+        } catch (IllegalAccessException | InvocationTargetException e) {
             throw new SQLException(e);
         }
     }

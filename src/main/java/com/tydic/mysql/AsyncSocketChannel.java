@@ -1,5 +1,6 @@
 package com.tydic.mysql;
 
+import com.mysql.jdbc.MySQLConnection;
 import com.mysql.jdbc.MysqlIO;
 import io.netty.channel.Channel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -14,6 +15,19 @@ import java.nio.channels.spi.SelectorProvider;
 public class AsyncSocketChannel extends NioSocketChannel {
     private MysqlIO io;
     private byte[] mockPacket;
+    private Object connectionMutex;
+
+    private boolean async;
+
+    public MySQLConnection getMySQLConnection() {
+        return mySQLConnection;
+    }
+
+    public void setMySQLConnection(MySQLConnection mySQLConnection) {
+        this.mySQLConnection = mySQLConnection;
+    }
+
+    private MySQLConnection mySQLConnection;
 
     public AsyncSocketChannel() {
         try {
@@ -37,6 +51,12 @@ public class AsyncSocketChannel extends NioSocketChannel {
 
     public SocketChannel javaChannel() {
         return super.javaChannel();
+    }
+
+    @Override
+    protected void doClose() throws Exception {
+        mySQLConnection.close();
+        super.doClose();
     }
 
     public OutputStream getOutputStream() {
@@ -69,5 +89,19 @@ public class AsyncSocketChannel extends NioSocketChannel {
 
     public byte[] getMockPacket() {
         return mockPacket;
+    }
+    public Object getConnectionMutex() {
+        return connectionMutex;
+    }
+
+    public void setConnectionMutex(Object connectionMutex) {
+        this.connectionMutex = connectionMutex;
+    }
+    public boolean isAsync() {
+        return async;
+    }
+
+    public void setAsync(boolean async) {
+        this.async = async;
     }
 }

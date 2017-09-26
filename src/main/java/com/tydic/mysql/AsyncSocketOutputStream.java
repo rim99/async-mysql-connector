@@ -1,43 +1,48 @@
 package com.tydic.mysql;
 
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PipedOutputStream;
 
-/**
- * Created by shihailong on 2017/9/21.
- */
-public class AsyncSocketOutputStream extends OutputStream {
-
+public class AsyncSocketOutputStream
+        extends OutputStream {
     private PipedOutputStream pipedOutputStream;
+    private final AsyncSocketChannel channel;
 
     public AsyncSocketOutputStream(AsyncSocketChannel channel) {
         this.channel = channel;
-        pipedOutputStream = channel.getPipedOutputStream();
+        this.pipedOutputStream = channel.getPipedOutputStream();
     }
 
-    private final AsyncSocketChannel channel;
-
-    @Override
-    public void write(int b) throws IOException {
-        write(new byte[]{(byte)b}, 0, 1);
+    public void write(int b)
+            throws IOException {
+        write(new byte[]{(byte) b}, 0, 1);
     }
 
-    @Override
-    public void write(byte[] b) throws IOException {
+    public void write(byte[] b)
+            throws IOException {
         write(b, 0, b.length);
     }
 
-    @Override
-    public void write(byte[] b, int off, int len) throws IOException {
-        channel.writeAndFlush(Unpooled.wrappedBuffer(b, off, len));
-        byte[] mockPacket = channel.getMockPacket();
-        if(mockPacket != null){
-            pipedOutputStream.write(mockPacket);
-            channel.setMockPacket(null);
-            pipedOutputStream.flush();
+    public void write(byte[] b, int off, int len)
+            throws IOException {
+        ByteBuf buff = channel.alloc().buffer(len - off);
+        buff.writeBytes(b, off, len);
+        this.channel.write(buff);
+        byte[] mockPacket = this.channel.getMockPacket();
+        if (mockPacket != null) {
+            this.pipedOutputStream.write(mockPacket);
+            this.channel.setMockPacket(null);
+            this.pipedOutputStream.flush();
         }
+    }
+
+    public void flush()
+            throws IOException {
+        this.channel.flush();
     }
 }

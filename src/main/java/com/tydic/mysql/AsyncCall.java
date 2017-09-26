@@ -2,6 +2,7 @@ package com.tydic.mysql;
 
 import com.tydic.mysql.async.ResultSetListener;
 import com.tydic.mysql.async.UpdateCountListener;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.Future;
 
@@ -38,6 +39,9 @@ public class AsyncCall {
      */
     public static <T> Future<T> bind(Statement statement, AsyncListener<T> listener) throws SQLException {
         return AsyncStatementInterceptor.intercept(statement, listener);
+    }
+    public static <T> Future<T> bind(EventLoop eventLoop, Statement statement, AsyncListener<T> listener) throws SQLException {
+        return AsyncStatementInterceptor.intercept(eventLoop, statement, listener);
     }
 
     /**

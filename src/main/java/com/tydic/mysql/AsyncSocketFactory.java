@@ -3,6 +3,7 @@ package com.tydic.mysql;
 import com.mysql.jdbc.SocketFactory;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -28,11 +29,19 @@ public class AsyncSocketFactory implements SocketFactory {
     static {
         nettyBootstrap.group(EVENT_EXECUTORS).channel(AsyncSocketChannel.class);
         nettyBootstrap.option(ChannelOption.SO_KEEPALIVE, true);
+        nettyBootstrap.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         ChannelInitializer<AsyncSocketChannel> channelInitializer = new ChannelInitializer<AsyncSocketChannel>() {
             @Override
-            protected void initChannel(AsyncSocketChannel ch) throws Exception {
+            protected void initChannel(final AsyncSocketChannel ch) throws Exception {
                 final PipedOutputStream pipedOutputStream = ch.getPipedOutputStream();
                 ch.pipeline().addLast(DEFAULT_INBOUND_HANDLER, new ChannelInboundHandlerAdapter() {
+
+                    @Override
+                    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                        ch.getPipedOutputStream().close();
+                        ch.getInputStream().close();
+                        ch.close();
+                    }
 
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {

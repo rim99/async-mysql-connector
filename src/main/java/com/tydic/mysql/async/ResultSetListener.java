@@ -6,6 +6,7 @@ import com.tydic.mysql.AsyncListener;
 import com.tydic.mysql.AsyncSocketChannel;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.EventLoop;
 
 import java.io.IOException;
 import java.io.PipedOutputStream;
@@ -32,8 +33,8 @@ public class ResultSetListener extends AsyncListener<ResultSet> {
     }
 
     @Override
-    public void init(AsyncSocketChannel asyncSocketChannel) {
-        super.init(asyncSocketChannel);
+    public void init(AsyncSocketChannel asyncSocketChannel, EventLoop eventLoop) {
+        super.init(asyncSocketChannel, eventLoop);
         this.pipedOutputStream = asyncSocketChannel.getPipedOutputStream();
     }
 
