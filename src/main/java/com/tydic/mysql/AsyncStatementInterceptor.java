@@ -89,8 +89,8 @@ public class AsyncStatementInterceptor implements StatementInterceptorV2 {
         }
         if (this.listener != null && interceptStatement == interceptedStatement) {
             final ChannelPipeline pipeline = channel.pipeline();
-            pipeline.addFirst(this.eventLoop, TMP_LISTENER_NAME, listener);
-            pipeline.addFirst(this.eventLoop, MY_SQL_BUFFER_FRAME_DECODER_NAME, new MySQLBufferFrameDecoder());
+            pipeline.addAfter(this.eventLoop, AsyncSocketFactory.DEFAULT_LOG_HANDLER, TMP_LISTENER_NAME, listener);
+            pipeline.addAfter(this.eventLoop, AsyncSocketFactory.DEFAULT_LOG_HANDLER, MY_SQL_BUFFER_FRAME_DECODER_NAME, new MySQLBufferFrameDecoder());
             channel.setMockPacket(OK);
             //noinspection unchecked
             listener.getFuture().addListener(new GenericFutureListener<Future<?>>() {
