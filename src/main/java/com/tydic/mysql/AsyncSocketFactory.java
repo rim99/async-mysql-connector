@@ -6,24 +6,27 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Log4J2LoggerFactory;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import java.io.IOException;
 import java.io.PipedOutputStream;
 import java.net.Socket;
-import java.net.SocketException;
 import java.util.Properties;
 
 /**
  * Created by shihailong on 2017/9/21.
  */
 public class AsyncSocketFactory implements SocketFactory {
+    private static final Log logger = LogFactory.getLog(AsyncSocketFactory.class);
+
     private static Bootstrap nettyBootstrap = new Bootstrap();
 
     private static int DEFAULT_EVENT_LOOP_THREADS = Math.max(4, SystemPropertyUtil.getInt(
@@ -54,11 +57,16 @@ public class AsyncSocketFactory implements SocketFactory {
                     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
                         ch.getPipedOutputStream().close();
                         ch.getInputStream().close();
-                        ch.close();
+                        ch.doClose();
+                        logger.warn(ctx + " inactive");
                     }
 
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                        if(ch.isInErrorStream()){
+                            ReferenceCountUtil.release(msg);
+                            return;
+                        }
                         if (msg instanceof ByteBuf) {
                             ByteBuf byteBuf = (ByteBuf) msg;
                             byteBuf.readBytes(pipedOutputStream, byteBuf.readableBytes());
@@ -71,18 +79,20 @@ public class AsyncSocketFactory implements SocketFactory {
 
                     @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        logger.error(cause);
                         ch.getPipedOutputStream().close();
                         ch.getInputStream().close();
-                        ch.close();
+                        ch.doClose();
                     }
                 });
                 ch.pipeline().addLast(DEFAULT_OUTBOUND_HANDLER, new ChannelOutboundHandlerAdapter() {
 
                     @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        logger.error(cause);
                         ch.getPipedOutputStream().close();
                         ch.getInputStream().close();
-                        ch.close();
+                        ch.doClose();
                     }
 
                     @Override
@@ -94,7 +104,10 @@ public class AsyncSocketFactory implements SocketFactory {
         };
         nettyBootstrap.handler(channelInitializer);
     }
-    /** The underlying TCP/IP socket to use */
+
+    /**
+     * The underlying TCP/IP socket to use
+     */
     protected Socket rawSocket = null;
 
     public Socket afterHandshake() throws IOException {

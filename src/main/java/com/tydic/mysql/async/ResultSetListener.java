@@ -48,15 +48,6 @@ public class ResultSetListener extends AsyncListener<ResultSet> {
     }
 
     @Override
-    protected void channelReadErrorPacket(ChannelHandlerContext ctx, ByteBuf error) {
-        try {
-            AsyncUtils.checkErrorPacket(channel.getIO(), error);
-        } catch (SQLException e) {
-            promise.setFailure(e);
-        }
-    }
-
-    @Override
     protected void channelReadEOFPacket(ChannelHandlerContext ctx, ByteBuf eof) {
         try {
             eof.readBytes(pipedOutputStream, eof.readableBytes());

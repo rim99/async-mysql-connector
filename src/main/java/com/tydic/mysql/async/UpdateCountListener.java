@@ -42,13 +42,4 @@ public class UpdateCountListener extends AsyncListener<Integer> {
         }
         promise.setSuccess(sw);
     }
-
-    @Override
-    protected void channelReadErrorPacket(ChannelHandlerContext ctx, ByteBuf error) {
-        try {
-            AsyncUtils.checkErrorPacket(channel.getIO(), error);
-        } catch (SQLException e) {
-            promise.setFailure(e);
-        }
-    }
 }

@@ -1,13 +1,16 @@
 package com.tydic.mysql;
 
+import com.mysql.jdbc.AsyncUtils;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoop;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.Future;
 
 import java.io.IOException;
+import java.sql.SQLException;
 
 /**
  * Created by shihailong on 2017/9/21.
@@ -41,6 +44,9 @@ public abstract class AsyncListener<T> extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        if(ctx.isRemoved()){
+            ReferenceCountUtil.release(msg);
+        }
         synchronized (this.channel.getConnectionMutex()) {
             if (msg instanceof ByteBuf) {
                 ByteBuf byteBuf = (ByteBuf) msg;
@@ -69,7 +75,13 @@ public abstract class AsyncListener<T> extends ChannelInboundHandlerAdapter {
                 channelReadEOFPacket(ctx, byteBuf);
                 break;
             case 0xFF:
+                channel.setInErrorStream(true);
                 channelReadErrorPacket(ctx, byteBuf);
+                try{
+                    AsyncUtils.checkErrorPacket(channel.getIO(), byteBuf);
+                }catch (SQLException e){
+                    promise.setFailure(e);
+                }
                 break;
             case 0xFC:
                 type = (byteBuf.getByte(5) & 0xFF) | ((byteBuf.getByte(6) & 0xFF) << 8);
