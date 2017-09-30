@@ -45,13 +45,22 @@ public class AsyncCallTest {
             }
         }).sync();
 
-
-        selectFromDual(connection);
-        dropTable(connection);
-        createTable(connection);
-        insertTable(connection);
-        selectTable(connection);
-        connection.close();
+        try {
+            selectFromDual(connection);
+            dropTable(connection);
+            createTable(connection);
+        } catch (SQLException e) {
+            System.out.println("SQLException[" + e.getErrorCode() + "," + e.getSQLState() + "," + e.getMessage());
+            e.printStackTrace();
+        }
+        try {
+            insertTable(connection);
+            selectTable(connection);
+            connection.close();
+        } catch (SQLException e) {
+            System.out.println("SQLException[" + e.getErrorCode() + "," + e.getSQLState() + "," + e.getMessage());
+            e.printStackTrace();
+        }
 
     }
 

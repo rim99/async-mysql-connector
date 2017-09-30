@@ -20,6 +20,8 @@ import java.io.IOException;
 import java.io.PipedOutputStream;
 import java.net.Socket;
 import java.util.Properties;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
 
 /**
  * Created by shihailong on 2017/9/21.
@@ -49,15 +51,12 @@ public class AsyncSocketFactory implements SocketFactory {
         ChannelInitializer<AsyncSocketChannel> channelInitializer = new ChannelInitializer<AsyncSocketChannel>() {
             @Override
             protected void initChannel(final AsyncSocketChannel ch) throws Exception {
-                final PipedOutputStream pipedOutputStream = ch.getPipedOutputStream();
                 ch.pipeline().addLast(DEFAULT_LOG_HANDLER, new LoggingHandler(LogLevel.INFO));
                 ch.pipeline().addLast(DEFAULT_INBOUND_HANDLER, new ChannelInboundHandlerAdapter() {
 
                     @Override
                     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-                        ch.getPipedOutputStream().close();
-                        ch.getInputStream().close();
-                        ch.doClose();
+                        ctx.close();
                         logger.warn(ctx + " inactive");
                     }
 
@@ -68,10 +67,7 @@ public class AsyncSocketFactory implements SocketFactory {
                             return;
                         }
                         if (msg instanceof ByteBuf) {
-                            ByteBuf byteBuf = (ByteBuf) msg;
-                            byteBuf.readBytes(pipedOutputStream, byteBuf.readableBytes());
-                            byteBuf.release();
-                            pipedOutputStream.flush();
+                            ch.getInputQueue().offer((ByteBuf) msg);
                         } else {
                             super.channelRead(ctx, msg);
                         }
@@ -80,24 +76,19 @@ public class AsyncSocketFactory implements SocketFactory {
                     @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                         logger.error(cause);
-                        ch.getPipedOutputStream().close();
-                        ch.getInputStream().close();
-                        ch.doClose();
+                        ctx.close();
                     }
                 });
                 ch.pipeline().addLast(DEFAULT_OUTBOUND_HANDLER, new ChannelOutboundHandlerAdapter() {
 
                     @Override
-                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                        logger.error(cause);
-                        ch.getPipedOutputStream().close();
-                        ch.getInputStream().close();
-                        ch.doClose();
-                    }
-
-                    @Override
                     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
                         super.write(ctx, msg, promise);
+                    }
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        logger.error(cause);
+                        ctx.close();
                     }
                 });
             }

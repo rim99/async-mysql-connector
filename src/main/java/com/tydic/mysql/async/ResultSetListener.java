@@ -18,13 +18,11 @@ import java.sql.Statement;
  * Created by shihailong on 2017/9/21.
  */
 public class ResultSetListener extends AsyncListener<ResultSet> {
-    private PipedOutputStream pipedOutputStream;
     private Statement statement;
 
     public ResultSetListener(AsyncSocketChannel asyncSocketChannel, Statement statement) {
         super(asyncSocketChannel);
         this.statement = statement;
-        this.pipedOutputStream = asyncSocketChannel.getPipedOutputStream();
     }
 
     public ResultSetListener(Statement statement) {
@@ -35,32 +33,24 @@ public class ResultSetListener extends AsyncListener<ResultSet> {
     @Override
     public void init(AsyncSocketChannel asyncSocketChannel, EventLoop eventLoop) {
         super.init(asyncSocketChannel, eventLoop);
-        this.pipedOutputStream = asyncSocketChannel.getPipedOutputStream();
     }
 
     @Override
     protected void channelReadResultSetPacket(ChannelHandlerContext ctx, ByteBuf byteBuf) {
-        try {
-            byteBuf.readBytes(pipedOutputStream, byteBuf.readableBytes());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        byteBuf.retain();
+        channel.getInputQueue().offer(byteBuf);
     }
 
     @Override
-    protected void channelReadEOFPacket(ChannelHandlerContext ctx, ByteBuf eof) {
-        try {
-            eof.readBytes(pipedOutputStream, eof.readableBytes());
-            pipedOutputStream.flush();
-            if (isEOFDeprecated) {
-                try {
-                    promise.setSuccess(AsyncUtils.build((StatementImpl) statement));
-                } catch (SQLException e) {
-                    promise.setFailure(e);
-                }
+    protected void channelReadEOFPacket(ChannelHandlerContext ctx, ByteBuf byteBuf) {
+        byteBuf.retain();
+        channel.getInputQueue().offer(byteBuf);
+        if (isEOFDeprecated) {
+            try {
+                promise.setSuccess(AsyncUtils.build((StatementImpl) statement));
+            } catch (SQLException e) {
+                promise.setFailure(e);
             }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
     }
 }

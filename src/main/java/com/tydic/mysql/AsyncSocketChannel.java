@@ -6,10 +6,14 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
 
 /**
  * Created by shihailong on 2017/9/21.
@@ -19,9 +23,12 @@ public class AsyncSocketChannel extends NioSocketChannel {
     private byte[] mockPacket;
     private Object connectionMutex;
     private volatile boolean inErrorStream;
+    private BlockingQueue<ByteBuf> inputQueue = new LinkedBlockingDeque<>();
 
     private boolean async;
-    private AsyncSocketOutputStream asyncSocketOutputStream;
+    private AsyncSocketOutputStream asyncSocketOutputStream = new AsyncSocketOutputStream(this);
+    ;
+    private AsyncSocketInputStream asyncSocketInputStream = new AsyncSocketInputStream(this);
 
     public MySQLConnection getMySQLConnection() {
         return mySQLConnection;
@@ -34,12 +41,7 @@ public class AsyncSocketChannel extends NioSocketChannel {
     private MySQLConnection mySQLConnection;
 
     public AsyncSocketChannel() {
-        try {
-            pipedOutputStream.connect(pipedInputStream);
-            asyncSocketOutputStream = new AsyncSocketOutputStream(this);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        super();
     }
 
     public AsyncSocketChannel(SelectorProvider provider) {
@@ -60,27 +62,19 @@ public class AsyncSocketChannel extends NioSocketChannel {
 
     @Override
     protected void doClose() throws Exception {
-        if(mySQLConnection != null){
+        super.doClose();
+        if (mySQLConnection != null) {
             mySQLConnection.close();
         }
         asyncSocketOutputStream.close();
-        super.doClose();
     }
 
     public OutputStream getOutputStream() {
         return asyncSocketOutputStream;
     }
 
-    private PipedInputStream pipedInputStream = new PipedInputStream();
-
-    public PipedOutputStream getPipedOutputStream() {
-        return pipedOutputStream;
-    }
-
-    private PipedOutputStream pipedOutputStream = new PipedOutputStream();
-
     public InputStream getInputStream() {
-        return pipedInputStream;
+        return asyncSocketInputStream;
     }
 
     public void setIO(MysqlIO io) {
@@ -114,6 +108,7 @@ public class AsyncSocketChannel extends NioSocketChannel {
     public void setAsync(boolean async) {
         this.async = async;
     }
+
     void selfWrite(ByteBuf byteBuf) throws IOException {
         ByteBuffer[] nioBuffers = byteBuf.nioBuffers();
         int nioBufferCnt = byteBuf.nioBufferCount();
@@ -121,7 +116,7 @@ public class AsyncSocketChannel extends NioSocketChannel {
         SocketChannel ch = javaChannel();
         // Always us nioBuffers() to workaround data-corruption.
         // See https://github.com/netty/netty/issues/2761
-        while(expectedWrittenBytes > 0) {
+        while (expectedWrittenBytes > 0) {
             switch (nioBufferCnt) {
                 case 0:
                     return;
@@ -155,11 +150,16 @@ public class AsyncSocketChannel extends NioSocketChannel {
         }
         byteBuf.clear();
     }
+
     public boolean isInErrorStream() {
         return inErrorStream;
     }
 
     public void setInErrorStream(boolean inErrorStream) {
         this.inErrorStream = inErrorStream;
+    }
+
+    public BlockingQueue<ByteBuf> getInputQueue() {
+        return inputQueue;
     }
 }
