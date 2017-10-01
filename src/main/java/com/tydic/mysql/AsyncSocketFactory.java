@@ -51,7 +51,7 @@ public class AsyncSocketFactory implements SocketFactory {
         ChannelInitializer<AsyncSocketChannel> channelInitializer = new ChannelInitializer<AsyncSocketChannel>() {
             @Override
             protected void initChannel(final AsyncSocketChannel ch) throws Exception {
-                ch.pipeline().addLast(DEFAULT_LOG_HANDLER, new LoggingHandler(LogLevel.INFO));
+                ch.pipeline().addLast(DEFAULT_LOG_HANDLER, new LoggingHandler(LogLevel.DEBUG));
                 ch.pipeline().addLast(DEFAULT_INBOUND_HANDLER, new ChannelInboundHandlerAdapter() {
 
                     @Override

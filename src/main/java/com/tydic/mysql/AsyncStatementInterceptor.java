@@ -8,6 +8,8 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoop;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import java.sql.SQLException;
 import java.util.Map;
@@ -23,6 +25,7 @@ public class AsyncStatementInterceptor implements StatementInterceptorV2 {
     public static final String TMP_LISTENER_NAME = "TMP_LISTENER";
     public static byte[] OK = new byte[]{7, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0};
     static final Map<java.sql.Connection, AsyncStatementInterceptor> CONNECTION_INTERCEPTOR_MAP = new ConcurrentHashMap<>();
+    private static final Log logger = LogFactory.getLog(AsyncStatementInterceptor.class);
 
     private AsyncSocketChannel channel;
     private boolean init = false;
@@ -45,7 +48,7 @@ public class AsyncStatementInterceptor implements StatementInterceptorV2 {
         channel = asyncSocket.getAsyncSocketChannel();
         channel.setIO(io);
         channel.setMySQLConnection(mySQLConnection);
-        channel.setConnectionMutex(mySQLConnection.getConnectionMutex());
+        channel.setConnectionMutex(this);
         init = true;
     }
 
@@ -84,10 +87,14 @@ public class AsyncStatementInterceptor implements StatementInterceptorV2 {
     }
 
     public ResultSetInternalMethods preProcess(String sql, Statement interceptedStatement, Connection connection) throws SQLException {
+        if(logger.isInfoEnabled()){
+            logger.info("preProcess " + sql);
+        }
         if (!init) {
             return null;
         }
         if (this.listener != null && interceptStatement == interceptedStatement) {
+            channel.setConnectionMutex(mySQLConnection.getConnectionMutex());
             final ChannelPipeline pipeline = channel.pipeline();
             pipeline.addAfter(this.eventLoop, AsyncSocketFactory.DEFAULT_LOG_HANDLER, TMP_LISTENER_NAME, listener);
             pipeline.addAfter(this.eventLoop, AsyncSocketFactory.DEFAULT_LOG_HANDLER, MY_SQL_BUFFER_FRAME_DECODER_NAME, new MySQLBufferFrameDecoder());
@@ -100,6 +107,7 @@ public class AsyncStatementInterceptor implements StatementInterceptorV2 {
                     pipeline.remove(TMP_LISTENER_NAME);
                     pipeline.remove(MY_SQL_BUFFER_FRAME_DECODER_NAME);
                     channel.setAsync(false);
+                    channel.setConnectionMutex(AsyncStatementInterceptor.this);
                 }
             });
             this.channel.setAsync(true);
@@ -121,6 +129,9 @@ public class AsyncStatementInterceptor implements StatementInterceptorV2 {
     }
 
     public ResultSetInternalMethods postProcess(String sql, Statement interceptedStatement, ResultSetInternalMethods originalResultSet, Connection connection, int warningCount, boolean noIndexUsed, boolean noGoodIndexUsed, SQLException statementException) throws SQLException {
+        if(logger.isInfoEnabled()){
+            logger.info("postProcess " + sql);
+        }
         return null;
     }
 }

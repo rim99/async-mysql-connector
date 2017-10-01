@@ -42,11 +42,19 @@ public class AsyncSocketInputStream extends InputStream {
     private ByteBuf take() throws IOException {
         BlockingQueue<ByteBuf> inputQueue = channel.getInputQueue();
         ByteBuf polled;
+        int socketTimeout = channel.getAsyncSocket().getSoTimeout();
+        long timeOut = 0;
+        if(socketTimeout > 0){
+            timeOut = socketTimeout + System.currentTimeMillis();
+        }
         while(channel.isActive()){
             try {
                 polled = inputQueue.poll(10, TimeUnit.MILLISECONDS);
                 if(polled != null){
                     return polled;
+                }
+                if(timeOut != 0 && System.currentTimeMillis() > timeOut){
+                    throw new IOException("read timeout " + socketTimeout);
                 }
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);

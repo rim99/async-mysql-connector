@@ -16,6 +16,7 @@ public class AsyncSocket extends Socket {
     AsyncSocket(AsyncSocketChannel channel) throws SocketException {
         super((SocketImpl) null);
         this.channel = channel;
+        this.channel.setAsyncSocket(this);
         this.rawSocket = channel.javaChannel().socket();
     }
 

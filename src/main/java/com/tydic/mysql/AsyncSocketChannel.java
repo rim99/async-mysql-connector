@@ -21,9 +21,10 @@ import java.util.concurrent.LinkedBlockingDeque;
 public class AsyncSocketChannel extends NioSocketChannel {
     private MysqlIO io;
     private byte[] mockPacket;
-    private Object connectionMutex;
+    private volatile Object connectionMutex;
     private volatile boolean inErrorStream;
     private BlockingQueue<ByteBuf> inputQueue = new LinkedBlockingDeque<>();
+    private AsyncSocket asyncSocket;
 
     private boolean async;
     private AsyncSocketOutputStream asyncSocketOutputStream = new AsyncSocketOutputStream(this);
@@ -110,6 +111,7 @@ public class AsyncSocketChannel extends NioSocketChannel {
     }
 
     void selfWrite(ByteBuf byteBuf) throws IOException {
+        this.inputQueue.clear();
         ByteBuffer[] nioBuffers = byteBuf.nioBuffers();
         int nioBufferCnt = byteBuf.nioBufferCount();
         long expectedWrittenBytes = byteBuf.readableBytes();
@@ -161,5 +163,13 @@ public class AsyncSocketChannel extends NioSocketChannel {
 
     public BlockingQueue<ByteBuf> getInputQueue() {
         return inputQueue;
+    }
+
+    public AsyncSocket getAsyncSocket() {
+        return asyncSocket;
+    }
+
+    public void setAsyncSocket(AsyncSocket asyncSocket) {
+        this.asyncSocket = asyncSocket;
     }
 }

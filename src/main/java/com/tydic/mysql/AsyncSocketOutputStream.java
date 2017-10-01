@@ -1,7 +1,10 @@
 package com.tydic.mysql;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -10,6 +13,7 @@ public class AsyncSocketOutputStream
         extends OutputStream {
     private final AsyncSocketChannel channel;
     private ByteBuf writeByteBuf;
+    private static final Log logger = LogFactory.getLog(AsyncSocketOutputStream.class);
 
     public AsyncSocketOutputStream(AsyncSocketChannel channel) {
         this.channel = channel;
@@ -53,6 +57,9 @@ public class AsyncSocketOutputStream
         checkChannel();
         if (writeByteBuf == null) {
             return;
+        }
+        if(logger.isDebugEnabled()) {
+            logger.error("[" + this.channel.toString() + "] " + ByteBufUtil.prettyHexDump(writeByteBuf));
         }
         channel.selfWrite(writeByteBuf);
         checkMock();

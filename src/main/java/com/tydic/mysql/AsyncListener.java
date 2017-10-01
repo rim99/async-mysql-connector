@@ -8,6 +8,8 @@ import io.netty.channel.EventLoop;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.Future;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -16,6 +18,7 @@ import java.sql.SQLException;
  * Created by shihailong on 2017/9/21.
  */
 public abstract class AsyncListener<T> extends ChannelInboundHandlerAdapter {
+    private static final Log logger = LogFactory.getLog(AsyncListener.class);
     protected boolean isEOFDeprecated;
     private boolean inResultSetStream = false;
     private int columnCount;
@@ -80,6 +83,7 @@ public abstract class AsyncListener<T> extends ChannelInboundHandlerAdapter {
                 try{
                     AsyncUtils.checkErrorPacket(channel.getIO(), byteBuf);
                 }catch (SQLException e){
+                    logger.error(e);
                     promise.setFailure(e);
                 }
                 break;
