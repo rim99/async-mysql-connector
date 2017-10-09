@@ -32,7 +32,7 @@ public class AsyncSocketFactory implements SocketFactory {
     private static Bootstrap nettyBootstrap = new Bootstrap();
 
     private static int DEFAULT_EVENT_LOOP_THREADS = Math.max(4, SystemPropertyUtil.getInt(
-            "io.netty.eventLoopThreads", Runtime.getRuntime().availableProcessors()));
+            "com.tydic.async-mysql.threads", Runtime.getRuntime().availableProcessors()));
 
     public static final NioEventLoopGroup EVENT_EXECUTORS = new NioEventLoopGroup(DEFAULT_EVENT_LOOP_THREADS,
             new DefaultThreadFactory("async-mysql"));
