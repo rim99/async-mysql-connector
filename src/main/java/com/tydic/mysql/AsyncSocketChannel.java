@@ -61,15 +61,6 @@ public class AsyncSocketChannel extends NioSocketChannel {
         return super.javaChannel();
     }
 
-    @Override
-    protected void doClose() throws Exception {
-        super.doClose();
-        if (mySQLConnection != null) {
-            mySQLConnection.close();
-        }
-        asyncSocketOutputStream.close();
-    }
-
     public OutputStream getOutputStream() {
         return asyncSocketOutputStream;
     }

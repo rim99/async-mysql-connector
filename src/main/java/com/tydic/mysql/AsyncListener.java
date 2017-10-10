@@ -80,12 +80,6 @@ public abstract class AsyncListener<T> extends ChannelInboundHandlerAdapter {
             case 0xFF:
                 channel.setInErrorStream(true);
                 channelReadErrorPacket(ctx, byteBuf);
-                try{
-                    AsyncUtils.checkErrorPacket(channel.getIO(), byteBuf);
-                }catch (SQLException e){
-                    logger.error(e);
-                    promise.setFailure(e);
-                }
                 break;
             case 0xFC:
                 type = (byteBuf.getByte(5) & 0xFF) | ((byteBuf.getByte(6) & 0xFF) << 8);
@@ -144,7 +138,12 @@ public abstract class AsyncListener<T> extends ChannelInboundHandlerAdapter {
     }
 
     protected void channelReadErrorPacket(ChannelHandlerContext ctx, ByteBuf error) {
-        promise.setFailure(new IOException("非预期的报文"));
+        try{
+            AsyncUtils.checkErrorPacket(channel.getIO(), error);
+        }catch (SQLException e){
+            logger.error(e);
+            promise.setFailure(e);
+        }
     }
 
     protected void channelReadEOFPacket(ChannelHandlerContext ctx, ByteBuf eof) {

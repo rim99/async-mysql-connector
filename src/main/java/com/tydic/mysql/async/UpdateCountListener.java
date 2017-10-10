@@ -1,12 +1,9 @@
 package com.tydic.mysql.async;
 
-import com.mysql.jdbc.AsyncUtils;
 import com.tydic.mysql.AsyncListener;
 import com.tydic.mysql.AsyncSocketChannel;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-
-import java.sql.SQLException;
 
 /**
  * Created by shihailong on 2017/9/21.
